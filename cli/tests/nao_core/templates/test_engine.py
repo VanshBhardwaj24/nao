@@ -442,6 +442,18 @@ class TestTemplateEngine:
             base_url=None,
         )
 
+    def test_run_anthropic_messages_sends_no_sampling_parameters(self, tmp_path: Path):
+        """anthropic>=1.0 removed sampling parameters and Claude 4.7+ rejects non-default values, so none may be sent."""
+        engine = TemplateEngine(project_path=tmp_path)
+        fake_client = MagicMock()
+        fake_client.messages.create.return_value = MagicMock(content=[MagicMock(text="summary")])
+
+        result = engine._run_anthropic_messages(fake_client, "claude-opus-5-5", "summarize this")
+
+        assert result == "summary"
+        sent = fake_client.messages.create.call_args.kwargs
+        assert not {"temperature", "top_p", "top_k"} & sent.keys()
+
     def test_prompt_helper_anthropic_with_base_url(self, tmp_path: Path):
         """prompt helper should pass through to _generate_anthropic when provider is anthropic."""
         templates_dir = tmp_path / "templates"
